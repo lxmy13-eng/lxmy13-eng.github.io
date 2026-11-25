@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="欠交功課記錄" />
+  <meta name="theme-color" content="#4f46e5" />
+  <title>學生欠交功課記錄系統</title>
+  <!-- 內嵌網頁圖示 -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%234f46e5'/%3E%3Crect x='144' y='112' width='224' height='288' rx='28' fill='none' stroke='%23ffffff' stroke-width='28'/%3E%3Cpath d='M212 112V92a20 20 0 0120-20h48a20 20 0 0120 20v20' fill='none' stroke='%23ffffff' stroke-width='28'/%3E%3Cpath d='M204 264l36 36 72-76' fill='none' stroke='%23ffffff' stroke-width='32' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+  <!-- 自動產生 iPhone / Android 桌面高畫質 PNG App 圖示與 PWA Manifest -->
+  <script>
+    (function setupMobileAppMeta() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // 靛藍色圓角背景
+          ctx.fillStyle = '#4f46e5';
+          ctx.beginPath();
+          ctx.moveTo(112, 0);
+          ctx.lineTo(400, 0);
+          ctx.quadraticCurveTo(512, 0, 512, 112);
+          ctx.lineTo(512, 400);
+          ctx.quadraticCurveTo(512, 512, 400, 512);
+          ctx.lineTo(112, 512);
+          ctx.quadraticCurveTo(0, 512, 0, 400);
+          ctx.lineTo(0, 112);
+          ctx.quadraticCurveTo(0, 0, 112, 0);
+          ctx.closePath();
+          ctx.fill();
+
+          // 白色功課簿外框與勾選符號
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 30;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.strokeRect(148, 120, 216, 276);
+
+          ctx.beginPath();
+          ctx.moveTo(212, 120);
+          ctx.lineTo(212, 92);
+          ctx.lineTo(300, 92);
+          ctx.lineTo(300, 120);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(204, 262);
+          ctx.lineTo(240, 298);
+          ctx.lineTo(312, 224);
+          ctx.stroke();
+
+          const iconDataUrl = canvas.toDataURL('image/png');
+          const appleIcon = document.createElement('link');
+          appleIcon.rel = 'apple-touch-icon';
+          appleIcon.href = iconDataUrl;
+          document.head.appendChild(appleIcon);
+
+          const manifestObj = {
+            name: '學生欠交功課記錄系統',
+            short_name: '欠交功課記錄',
+            start_url: '.',
+            display: 'standalone',
+            background_color: '#f8fafc',
+            theme_color: '#4f46e5',
+            icons: [
+              { src: iconDataUrl, sizes: '512x512', type: 'image/png' }
+            ]
+          };
+          const manifestLink = document.createElement('link');
+          manifestLink.rel = 'manifest';
+          manifestLink.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestObj));
+          document.head.appendChild(manifestLink);
+        }
+      } catch (e) {
+        // 忽略不支援動態圖示的舊瀏覽器
+      }
+    })();
+  </script>
+
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 載入 Google Fonts (Noto Sans TC 與 Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    if (typeof tailwind !== 'undefined') {
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Noto Sans TC"', 'Inter', 'system-ui', 'sans-serif'],
+            },
+          }
+        }
+      };
+    }
+  </script>
+
+  <style>
+    /* 自訂捲動軸樣式，提升大量功課橫向捲動體驗 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* 隱藏分頁標籤列捲動軸但保留滑動能力 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 欠交 X 符號點擊彈跳動畫 */
+    @keyframes popIn {
+      0% { transform: scale(0.6); opacity: 0.4; }
+      70% { transform: scale(1.12); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.18s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* 固定欄位的陰影效果，讓橫向與縱向捲動時層次更分明 */
+    .sticky-left-shadow {
+      box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.06);
+    }
+    .sticky-right-shadow {
+      box-shadow: -4px 0 8px -2px rgba(15, 23, 42, 0.06);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col select-none">
+
+  <!-- ==================== 頂部導覽列 ==================== -->
+  <header class="bg-white border-b border-slate-200 px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+        <!-- 功課簿圖示 -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">學生欠交功課記錄系統</h1>
+        <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+          <!-- 自動儲存狀態指示器 -->
+          <span id="saveStatusDot" class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+          <span id="saveStatusText">正在連線至自動存檔系統...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右側功能按鈕列：總覽名單、匯出/匯入存檔 -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <button type="button" onclick="openReportModal()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-sm font-medium transition active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <span>欠交名單總覽</span>
+      </button>
+
+      <button type="button" onclick="exportBackupFile()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition active:scale-95" title="下載 JSON 存檔備份">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        <span class="hidden sm:inline">匯出存檔</span>
+      </button>
+
+      <label class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium transition active:scale-95 cursor-pointer" title="從本機檔案還原資料">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+        <span class="hidden sm:inline">匯入存檔</span>
+        <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importBackupFile(event)" />
+      </label>
+    </div>
+  </header>
+
+  <!-- ==================== 班別分頁管理列 ==================== -->
+  <div class="bg-slate-100/80 border-b border-slate-200 px-4 pt-2.5 sm:px-6 flex items-center justify-between gap-2">
+    <!-- 班別標籤列表 (橫向捲動) -->
+    <div id="classTabsContainer" class="flex items-center gap-1.5 overflow-x-auto pb-0 no-scrollbar flex-1">
+      <!-- 由 JS 動態渲染班別分頁 -->
+    </div>
+
+    <!-- 新增班別按鈕 -->
+    <div class="pb-2 shrink-0">
+      <button type="button" onclick="openAddClassModal()" class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm transition active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>新增班別</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 當前班別工具列 ==================== -->
+  <div id="classToolbar" class="bg-white border-b border-slate-200 px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2 flex-wrap">
+      <button type="button" onclick="openAssignmentModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm transition active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>新增功課欄位</span>
+      </button>
+
+      <button type="button" onclick="openStudentsModal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span>管理學號 / 名單</span>
+      </button>
+
+      <!-- 篩選：只顯示有欠交的學生 -->
+      <button type="button" id="filterMissingBtn" onclick="toggleFilterMissing()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition active:scale-95">
+        <span id="filterIndicator" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span>
+        <span>只顯示欠交學生</span>
+      </button>
+    </div>
+
+    <!-- 班別重新命名與刪除 -->
+    <div class="flex items-center gap-2">
+      <span id="classSummaryBadge" class="text-xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">
+        共 0 位學生 · 0 項功課
+      </span>
+      <button type="button" onclick="openEditClassModal()" class="p-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition" title="修改班別名稱">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </button>
+      <button type="button" onclick="confirmDeleteCurrentClass()" class="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition" title="刪除此班別">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== 主要記錄表格區域 ==================== -->
+  <main class="flex-1 p-3 sm:p-6 flex flex-col overflow-hidden">
+    <!-- 操作提示條 -->
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 px-1">
+      <div class="flex items-center gap-4">
+        <span class="inline-flex items-center gap-1.5">
+          <span class="w-5 h-5 rounded-md border border-slate-300 bg-white inline-flex items-center justify-center"></span>
+          <span>已交 / 正常</span>
+        </span>
+        <span class="inline-flex items-center gap-1.5 font-medium text-rose-600">
+          <span class="w-5 h-5 rounded-md bg-rose-600 text-white font-bold inline-flex items-center justify-center text-xs">✕</span>
+          <span>點擊方格標記「✕」代表欠交</span>
+        </span>
+      </div>
+      <div>提示：點擊上方功課標題可隨時編輯名稱或刪除該項功課</div>
+    </div>
+
+    <!-- 表格外框 (支援雙向捲動與凍結窗格) -->
+    <div id="gridWrapper" class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-1 overflow-auto relative max-h-[calc(100vh-255px)]">
+      <table id="homeworkTable" class="w-full border-collapse text-left">
+        <!-- 由 JS 動態生成表頭與學生列 -->
+      </table>
+    </div>
+
+    <!-- 空狀態畫面 (當沒有任何班別時顯示) -->
+    <div id="emptyStateView" class="hidden flex-1 flex-col items-center justify-center bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      </div>
+      <h2 class="text-lg font-bold text-slate-800 mb-1">尚未建立任何班別</h2>
+      <p class="text-sm text-slate-500 mb-5 max-w-sm">請點擊上方「新增班別」按鈕建立您的第一個班級記錄表，系統會自動為您儲存所有進度。</p>
+      <button type="button" onclick="openAddClassModal()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-sm transition">
+        + 立即建立班別
+      </button>
+    </div>
+  </main>
+
+  <!-- ==================== 彈出視窗 (Modals) ==================== -->
+
+  <!-- 1. 新增 / 編輯班別 Modal -->
+  <div id="classModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-pop">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="classModalTitle" class="text-lg font-bold text-slate-900">新增班別</h3>
+        <button type="button" onclick="closeModal('classModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">✕</button>
+      </div>
+      <form id="classForm" onsubmit="handleSaveClass(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">班別名稱 <span class="text-rose-500">*</span></label>
+          <input type="text" id="classNameInput" required placeholder="例如：1A班、中二乙、3C" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+        </div>
+        <div id="initialStudentCountGroup">
+          <label class="block text-sm font-medium text-slate-700 mb-1">預設產生學號人數</label>
+          <div class="flex items-center gap-3">
+            <input type="number" id="initialStudentCount" min="1" max="60" value="30" class="w-28 px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+            <span class="text-xs text-slate-500">號（建立後仍可隨時增刪學號或輸入姓名）</span>
+          </div>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('classModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium">取消</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm">確認儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. 新增 / 編輯功課 Modal -->
+  <div id="assignmentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-pop">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+        <h3 id="assignmentModalTitle" class="text-lg font-bold text-slate-900">新增功課</h3>
+        <button type="button" onclick="closeModal('assignmentModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">✕</button>
+      </div>
+      <form id="assignmentForm" onsubmit="handleSaveAssignment(event)" class="p-6 space-y-4 overflow-y-auto">
+        <input type="hidden" id="editingAssignmentId" value="" />
+        <input type="hidden" id="assignmentColorInput" value="slate" />
+
+        <!-- 科目分類與最近使用的科目便籤 -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-sm font-medium text-slate-700">科目分類 <span class="text-rose-500">*</span></label>
+            <span class="text-[11px] text-slate-400">點選下方紀錄可快速帶入科目與顏色</span>
+          </div>
+          <!-- 動態渲染最近使用的科目便籤 -->
+          <div id="savedSubjectChipsContainer" class="flex flex-wrap gap-1.5 mb-2"></div>
+          <input type="text" id="assignmentSubjectInput" oninput="updateTagPreview()" required placeholder="輸入科目名稱，例如：中文、英文、數學" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+        </div>
+
+        <!-- 便籤顏色選擇器 -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-sm font-medium text-slate-700">選擇便籤顏色</label>
+            <div class="flex items-center gap-1.5 text-xs text-slate-500">
+              <span>預覽：</span>
+              <span id="tagColorPreviewBadge" class="px-2 py-0.5 rounded-md text-[11px] font-semibold border bg-slate-100 text-slate-700 border-slate-300">科目便籤</span>
+            </div>
+          </div>
+          <div id="tagColorPickerContainer" class="grid grid-cols-5 sm:grid-cols-9 gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+            <!-- 由 JS 動態生成顏色按鈕 -->
+          </div>
+        </div>
+
+        <!-- 功課名稱與最近使用的功課名稱 -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">功課名稱 / 內容 <span class="text-rose-500">*</span></label>
+          <div id="recentTitleChipsContainer" class="flex flex-wrap gap-1.5 mb-2"></div>
+          <input type="text" id="assignmentTitleInput" required placeholder="例如：工作紙(二)、習作 P.14-15、默書改正" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">日期備註（選填）</label>
+          <input type="text" id="assignmentDateInput" placeholder="例如：11/25" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+        </div>
+
+        <div class="pt-3 flex items-center justify-between gap-2 border-t border-slate-100">
+          <!-- 編輯模式下顯示刪除此功課按鈕 -->
+          <button type="button" id="deleteAssignmentBtn" onclick="confirmDeleteAssignment()" class="hidden px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-medium transition">
+            刪除此功課
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" onclick="closeModal('assignmentModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium">取消</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm">儲存功課</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. 管理學生學號與名單 Modal -->
+  <div id="studentsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg max-h-[88vh] flex flex-col overflow-hidden animate-pop">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+        <h3 class="text-lg font-bold text-slate-900">管理學號與學生名單</h3>
+        <button type="button" onclick="closeModal('studentsModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">✕</button>
+      </div>
+
+      <!-- 快速新增單一學生 -->
+      <div class="p-4 bg-slate-50 border-b border-slate-200 shrink-0">
+        <form onsubmit="handleAddSingleStudent(event)" class="flex flex-wrap sm:flex-nowrap gap-2">
+          <input type="text" id="newStudentNum" required placeholder="學號 (如 31)" class="w-24 px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input type="text" id="newStudentName" placeholder="學生姓名 (選填)" class="flex-1 px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shrink-0">
+            + 新增學生
+          </button>
+        </form>
+      </div>
+
+      <!-- 現有學生列表 (可即時修改學號/姓名或刪除) -->
+      <div id="studentsListContainer" class="p-4 overflow-y-auto flex-1 space-y-2">
+        <!-- 由 JS 動態渲染 -->
+      </div>
+
+      <div class="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+        <span class="text-xs text-slate-500">修改後請點擊「完成並儲存」</span>
+        <button type="button" onclick="saveStudentsChanges()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm">
+          完成並儲存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 欠交名單總覽與一鍵複製 Modal -->
+  <div id="reportModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-pop">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+        <h3 class="text-lg font-bold text-slate-900">本班欠交功課名單總覽</h3>
+        <button type="button" onclick="closeModal('reportModal')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">✕</button>
+      </div>
+      <div class="p-6 overflow-y-auto flex-1 space-y-3">
+        <p class="text-xs text-slate-500">以下為系統自動整理的本班欠交明細，您可直接複製並貼上至班級群組或家校通訊程式：</p>
+        <textarea id="reportTextarea" readonly rows="10" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-mono text-slate-800 focus:outline-none"></textarea>
+      </div>
+      <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
+        <button type="button" onclick="closeModal('reportModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium">關閉</button>
+        <button type="button" onclick="copyReportText()" class="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+          <span>一鍵複製名單</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 自訂確認刪除對話框 -->
+  <div id="confirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm overflow-hidden animate-pop p-6">
+      <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <h3 id="confirmModalTitle" class="text-lg font-bold text-slate-900 mb-1">確定要刪除嗎？</h3>
+      <p id="confirmModalMessage" class="text-sm text-slate-500 mb-6">此動作無法復原。</p>
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="closeModal('confirmModal')" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium">取消</button>
+        <button type="button" id="confirmModalActionBtn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium shadow-sm">確定刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 浮動提示訊息 (Toast) -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== 應用程式邏輯與多層本機自動存檔 ==================== -->
+  <script>
+    // Firebase 雲端模組參考（僅在支援雲端環境時動態載入，確保本機離線開啟絕不報錯）
+    let firestoreApi = null;
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let isCloudEnabled = false;
+    let hasLoadedInitialSnapshot = false;
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'homework-tracker-default';
+    // 使用固定本機存檔金鑰，確保重新整理網頁後不會因環境 ID 變動而遺失資料
+    const PRIMARY_STORAGE_KEY = 'student_homework_tracker_state_v1';
+    const LEGACY_STORAGE_KEYS = [`hw_tracker_data_${appId}`, 'hw_tracker_data_homework-tracker-default'];
+    const IDB_NAME = 'StudentHomeworkTrackerDB';
+    const IDB_STORE = 'trackerState';
+
+    // 應用程式資料狀態
+    let classesData = []; // 所有班別陣列
+    let activeClassId = null; // 目前選中的班別 ID
+    let filterOnlyMissing = false; // 是否只顯示有欠交的學生
+    let tempStudentsEdit = []; // 編輯學生名單時的暫存陣列
+    let editingClassMode = 'add'; // 'add' 或 'edit'
+    let unsubscribeClasses = null;
+    let unsubscribePresets = null;
+    let isAppInitialized = false;
+
+    // 便籤顏色調色盤（不預設強制綁定科目，完全由使用者自選）
+    const TAG_COLORS = {
+      slate:   { label: '素灰', badge: 'bg-slate-100 text-slate-700 border-slate-300', swatch: 'bg-slate-400' },
+      rose:    { label: '玫瑰紅', badge: 'bg-rose-50 text-rose-700 border-rose-200', swatch: 'bg-rose-500' },
+      orange:  { label: '暖橙', badge: 'bg-orange-50 text-orange-700 border-orange-200', swatch: 'bg-orange-500' },
+      amber:   { label: '琥珀黃', badge: 'bg-amber-50 text-amber-700 border-amber-200', swatch: 'bg-amber-400' },
+      emerald: { label: '翠綠', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', swatch: 'bg-emerald-500' },
+      teal:    { label: '青綠', badge: 'bg-teal-50 text-teal-700 border-teal-200', swatch: 'bg-teal-500' },
+      blue:    { label: '天藍', badge: 'bg-blue-50 text-blue-700 border-blue-200', swatch: 'bg-blue-500' },
+      indigo:  { label: '靛藍', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200', swatch: 'bg-indigo-500' },
+      purple:  { label: '薰衣草紫', badge: 'bg-purple-50 text-purple-700 border-purple-200', swatch: 'bg-purple-500' }
+    };
+
+    // 使用者最近使用的科目便籤（名稱＋顏色）與功課名稱快取
+    let userPresets = {
+      subjectTags: [],
+      recentTitles: []
+    };
+
+    // 清除物件中的 undefined 欄位，避免儲存時發生型別錯誤
+    function sanitizeForStorage(obj) {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    function formatTimeNow() {
+      const now = new Date();
+      return [now.getHours(), now.getMinutes(), now.getSeconds()]
+        .map(n => String(n).padStart(2, '0'))
+        .join(':');
+    }
+
+    // ==================== 三層本機自動存檔引擎 (localStorage + IndexedDB + window.name) ====================
+    function openTrackerIDB() {
+      return new Promise((resolve, reject) => {
+        if (typeof indexedDB === 'undefined') {
+          reject(new Error('IndexedDB not supported'));
+          return;
+        }
+        const request = indexedDB.open(IDB_NAME, 1);
+        request.onupgradeneeded = (event) => {
+          const idb = event.target.result;
+          if (!idb.objectStoreNames.contains(IDB_STORE)) {
+            idb.createObjectStore(IDB_STORE);
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function writeToIDB(payload) {
+      try {
+        const idb = await openTrackerIDB();
+        return await new Promise((resolve) => {
+          const tx = idb.transaction(IDB_STORE, 'readwrite');
+          const store = tx.objectStore(IDB_STORE);
+          store.put(payload, PRIMARY_STORAGE_KEY);
+          tx.oncomplete = () => {
+            idb.close();
+            resolve(true);
+          };
+          tx.onerror = () => {
+            idb.close();
+            resolve(false);
+          };
+        });
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function readFromIDB() {
+      try {
+        const idb = await openTrackerIDB();
+        return await new Promise((resolve) => {
+          const tx = idb.transaction(IDB_STORE, 'readonly');
+          const store = tx.objectStore(IDB_STORE);
+          const req = store.get(PRIMARY_STORAGE_KEY);
+          req.onsuccess = () => {
+            idb.close();
+            resolve(req.result || null);
+          };
+          req.onerror = () => {
+            idb.close();
+            resolve(null);
+          };
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // 同步與非同步雙重寫入本機存檔
+    function saveToLocalStorage(silent = false) {
+      const payload = sanitizeForStorage({
+        initialized: true,
+        updatedAt: Date.now(),
+        classesData,
+        activeClassId,
+        userPresets
+      });
+      const jsonStr = JSON.stringify(payload);
+
+      let savedCount = 0;
+
+      // 第 1 層：標準 localStorage（跨分頁與重新開啟瀏覽器永久保留）
+      try {
+        window.localStorage.setItem(PRIMARY_STORAGE_KEY, jsonStr);
+        savedCount++;
+      } catch (e) {
+        // 部分無痕或受限環境可能阻擋 localStorage
+      }
+
+      // 第 2 層：window.name（即使在嚴格受限的預覽 iframe 中重新整理亦能完整保留）
+      try {
+        window.name = 'HW_TRACKER_STATE:' + jsonStr;
+        savedCount++;
+      } catch (e) {
+        // 忽略錯誤
+      }
+
+      // 第 3 層：IndexedDB（支援大容量與手機離線網頁 App 持久化）
+      writeToIDB(payload).then((idbSaved) => {
+        if (!silent) {
+          if (savedCount > 0 || idbSaved) {
+            updateSaveStatus('saved', `已自動儲存於本機 (${formatTimeNow()})`);
+          } else {
+            updateSaveStatus('error', '瀏覽器阻擋本機存檔，請使用右上角「匯出存檔」備份');
+          }
+        }
+      });
+
+      if (!silent && savedCount > 0) {
+        updateSaveStatus('saved', `已自動儲存於本機 (${formatTimeNow()})`);
+      }
+    }
+
+    // 從三層本機存檔中讀取最新的一份紀錄
+    async function loadFromLocalStorage() {
+      const candidates = [];
+
+      // 1. 讀取 localStorage（包含主金鑰與舊版相容金鑰）
+      try {
+        const keysToTry = [PRIMARY_STORAGE_KEY, ...LEGACY_STORAGE_KEYS];
+        for (const k of keysToTry) {
+          const raw = window.localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.classesData)) {
+              candidates.push(parsed);
+            }
+          }
+        }
+      } catch (e) {
+        // 忽略讀取錯誤
+      }
+
+      // 2. 讀取 window.name 備援
+      try {
+        if (typeof window.name === 'string' && window.name.startsWith('HW_TRACKER_STATE:')) {
+          const parsed = JSON.parse(window.name.slice('HW_TRACKER_STATE:'.length));
+          if (parsed && Array.isArray(parsed.classesData)) {
+            candidates.push(parsed);
+          }
+        }
+      } catch (e) {
+        // 忽略解析錯誤
+      }
+
+      // 3. 讀取 IndexedDB
+      const idbData = await readFromIDB();
+      if (idbData && Array.isArray(idbData.classesData)) {
+        candidates.push(idbData);
+      }
+
+      if (candidates.length === 0) {
+        return false;
+      }
+
+      // 挑選 updatedAt 最新的一份存檔
+      candidates.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      const latest = candidates[0];
+
+      classesData = latest.classesData;
+      activeClassId = latest.activeClassId && classesData.some(c => c.id === latest.activeClassId)
+        ? latest.activeClassId
+        : (classesData[0] ? classesData[0].id : null);
+
+      if (latest.userPresets) {
+        userPresets = {
+          subjectTags: Array.isArray(latest.userPresets.subjectTags) ? latest.userPresets.subjectTags : [],
+          recentTitles: Array.isArray(latest.userPresets.recentTitles) ? latest.userPresets.recentTitles : []
+        };
+      }
+
+      // 同步回所有本機儲存層，確保各層資料一致
+      saveToLocalStorage(true);
+      return true;
+    }
+
+    // 在重新整理或切換分頁前再執行一次強制寫入
+    window.addEventListener('pagehide', () => {
+      if (isAppInitialized) saveToLocalStorage(true);
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && isAppInitialized) {
+        saveToLocalStorage(true);
+      }
+    });
+
+    // ==================== 1. 初始化與驗證流程 ====================
+    async function initApp() {
+      // 第一步：無條件優先從本機自動存檔載入資料
+      const hasLocalData = await loadFromLocalStorage();
+      if (hasLocalData) {
+        isAppInitialized = true;
+        renderAll();
+        updateSaveStatus('saved', '已還原本機自動存檔');
+      }
+
+      try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          if (!hasLocalData) {
+            updateSaveStatus('saving', '正在載入存檔...');
+          }
+
+          const [appMod, authMod, fsMod] = await Promise.all([
+            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"),
+            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"),
+            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js")
+          ]);
+
+          firestoreApi = fsMod;
+          const firebaseConfig = JSON.parse(__firebase_config);
+          const app = appMod.initializeApp(firebaseConfig);
+          auth = authMod.getAuth(app);
+          db = fsMod.getFirestore(app);
+          isCloudEnabled = true;
+
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await authMod.signInWithCustomToken(auth, __initial_auth_token);
+          } else {
+            await authMod.signInAnonymously(auth);
+          }
+
+          authMod.onAuthStateChanged(auth, (user) => {
+            if (user) {
+              currentUser = user;
+              subscribeToClasses(hasLocalData);
+              subscribeToUserPresets();
+            }
+          });
+        } else {
+          // 純本機離線模式
+          isCloudEnabled = false;
+          if (!hasLocalData) {
+            await createDefaultStarterClass();
+          }
+          isAppInitialized = true;
+          updateSaveStatus('saved', '本機自動存檔已啟用');
+        }
+      } catch (error) {
+        console.error("初始化存檔系統時發生錯誤:", error);
+        isCloudEnabled = false;
+        if (!hasLocalData) {
+          await createDefaultStarterClass();
+        }
+        isAppInitialized = true;
+        updateSaveStatus('saved', '本機自動存檔已啟用');
+      }
+    }
+
+    // 監聽並同步使用者儲存的最近科目便籤與功課名稱
+    function subscribeToUserPresets() {
+      if (!currentUser || !db || !firestoreApi) return;
+      if (unsubscribePresets) unsubscribePresets();
+
+      const prefDocRef = firestoreApi.doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'preferences');
+      unsubscribePresets = firestoreApi.onSnapshot(prefDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          userPresets = {
+            subjectTags: Array.isArray(data.subjectTags) ? data.subjectTags : [],
+            recentTitles: Array.isArray(data.recentTitles) ? data.recentTitles : []
+          };
+          saveToLocalStorage(true);
+        }
+      }, (error) => {
+        console.error("讀取便籤偏好設定失敗:", error);
+      });
+    }
+
+    // 儲存最近使用的科目便籤與功課名稱
+    async function saveUserPresets() {
+      saveToLocalStorage();
+      if (!isCloudEnabled || !currentUser || !db || !firestoreApi) return;
+      try {
+        const prefDocRef = firestoreApi.doc(db, 'artifacts', appId, 'users', currentUser.uid, 'settings', 'preferences');
+        await firestoreApi.setDoc(prefDocRef, sanitizeForStorage(userPresets), { merge: true });
+      } catch (err) {
+        console.error("儲存便籤偏好設定失敗:", err);
+      }
+    }
+
+    // 監聽 Firestore 班別資料變化 (即時同步，且絕不以預設資料覆蓋已有本機存檔)
+    function subscribeToClasses(hadLocalDataOnBoot) {
+      if (!currentUser || !db || !firestoreApi) return;
+      if (unsubscribeClasses) unsubscribeClasses();
+
+      const classesColRef = firestoreApi.collection(db, 'artifacts', appId, 'users', currentUser.uid, 'classes');
+
+      unsubscribeClasses = firestoreApi.onSnapshot(classesColRef, async (snapshot) => {
+        const loaded = [];
+        snapshot.forEach((docSnap) => {
+          loaded.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        loaded.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        if (!hasLoadedInitialSnapshot) {
+          hasLoadedInitialSnapshot = true;
+          if (loaded.length === 0) {
+            if (hadLocalDataOnBoot || isAppInitialized) {
+              // 本機已有存檔，將本機資料同步至雲端而非重設
+              for (const cls of classesData) {
+                const docRef = firestoreApi.doc(db, 'artifacts', appId, 'users', currentUser.uid, 'classes', cls.id);
+                await firestoreApi.setDoc(docRef, sanitizeForStorage(cls), { merge: true });
+              }
+              isAppInitialized = true;
+              updateSaveStatus('saved', `已自動儲存於本機 (${formatTimeNow()})`);
+              return;
+            } else {
+              await createDefaultStarterClass();
+              isAppInitialized = true;
+              return;
+            }
+          }
+        }
+
+        if (loaded.length > 0) {
+          classesData = loaded;
+          if (!activeClassId || !classesData.some(c => c.id === activeClassId)) {
+            activeClassId = classesData[0].id;
+          }
+          saveToLocalStorage(true);
+        }
+
+        isAppInitialized = true;
+        updateSaveStatus('saved', `已自動儲存 (${formatTimeNow()})`);
+        renderAll();
+      }, (error) => {
+        console.error("同步發生異常，維持本機自動存檔:", error);
+        isAppInitialized = true;
+        updateSaveStatus('saved', `已自動儲存於本機 (${formatTimeNow()})`);
+      });
+    }
+
+    // 建立初始示範班別（僅在全新初次使用且無任何本機存檔時建立一次）
+    async function createDefaultStarterClass() {
+      const starterStudents = [];
+      for (let i = 1; i <= 15; i++) {
+        starterStudents.push({
+          id: 'stu_' + i,
+          number: String(i).padStart(2, '0'),
+          name: ''
+        });
+      }
+
+      const todayStr = `${new Date().getMonth() + 1}/${new Date().getDate()}`;
+      const defaultClass = {
+        id: 'class_' + Date.now(),
+        name: '1A班',
+        order: 0,
+        students: starterStudents,
+        assignments: [
+          { id: 'hw_1', subject: '中文', title: '習作 P.12', date: todayStr, color: 'slate' },
+          { id: 'hw_2', subject: '英文', title: 'Dictation 改正', date: todayStr, color: 'slate' },
+          { id: 'hw_3', subject: '數學', title: '補充工作紙(一)', date: todayStr, color: 'slate' }
+        ],
+        records: {
+          'stu_2_hw_1': true,
+          'stu_5_hw_2': true,
+          'stu_5_hw_3': true
+        }
+      };
+
+      classesData = [defaultClass];
+      activeClassId = defaultClass.id;
+      saveToLocalStorage();
+      renderAll();
+
+      if (isCloudEnabled && currentUser && db && firestoreApi) {
+        const docRef = firestoreApi.doc(db, 'artifacts', appId, 'users', currentUser.uid, 'classes', defaultClass.id);
+        await firestoreApi.setDoc(docRef, sanitizeForStorage(defaultClass));
+      }
+    }
+
+    // ==================== 2. 儲存輔助函式 ====================
+    async function saveClassDocument(classObj) {
+      updateSaveStatus('saving', '正在自動儲存...');
+      const idx = classesData.findIndex(c => c.id === classObj.id);
+      if (idx > -1) classesData[idx] = classObj;
+
+      // 立即寫入本機三層存檔
+      saveToLocalStorage();
+
+      try {
+        if (isCloudEnabled && currentUser && db && firestoreApi) {
+          const docRef = firestoreApi.doc(db, 'artifacts', appId, 'users', currentUser.uid, 'classes', classObj.id);
+          await firestoreApi.setDoc(docRef, sanitizeForStorage(classObj), { merge: true });
+          updateSaveStatus('saved', `已自動儲存 (${formatTimeNow()})`);
+        }
+      } catch (err) {
+        console.error("雲端同步失敗，已保留本機存檔:", err);
+        updateSaveStatus('saved', `已自動儲存於本機 (${formatTimeNow()})`);
+      }
+    }
+
+    function updateSaveStatus(state, text) {
+      const dot = document.getElementById('saveStatusDot');
+      const label = document.getElementById('saveStatusText');
+      if (!dot || !label) return;
+
+      label.textContent = text;
+      dot.className = 'w-2 h-2 rounded-full inline-block transition-colors ';
+      if (state === 'saving') {
+        dot.className += 'bg-amber-400 animate-ping';
+      } else if (state === 'saved') {
+        dot.className += 'bg-emerald-500';
+      } else if (state === 'offline') {
+        dot.className += 'bg-indigo-500';
+      } else {
+        dot.className += 'bg-rose-500';
+      }
+    }
+
+    // ==================== 3. 畫面渲染核心 ====================
+    function getActiveClass() {
+      return classesData.find(c => c.id === activeClassId) || null;
+    }
+
+    function renderAll() {
+      renderClassTabs();
+      const activeClass = getActiveClass();
+
+      const toolbar = document.getElementById('classToolbar');
+      const gridWrapper = document.getElementById('gridWrapper');
+      const emptyView = document.getElementById('emptyStateView');
+
+      if (!activeClass) {
+        toolbar.classList.add('hidden');
+        gridWrapper.classList.add('hidden');
+        emptyView.classList.remove('hidden');
+        emptyView.classList.add('flex');
+        return;
+      }
+
+      toolbar.classList.remove('hidden');
+      gridWrapper.classList.remove('hidden');
+      emptyView.classList.add('hidden');
+      emptyView.classList.remove('flex');
+
+      const studentCount = (activeClass.students || []).length;
+      const hwCount = (activeClass.assignments || []).length;
+      document.getElementById('classSummaryBadge').textContent = `共 ${studentCount} 位學生 · ${hwCount} 項功課`;
+
+      renderHomeworkGrid(activeClass);
+    }
+
+    // 渲染班別分頁籤
+    function renderClassTabs() {
+      const container = document.getElementById('classTabsContainer');
+      container.innerHTML = '';
+
+      classesData.forEach((cls) => {
+        const isActive = cls.id === activeClassId;
+        const missingCount = Object.values(cls.records || {}).filter(Boolean).length;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => {
+          activeClassId = cls.id;
+          saveToLocalStorage(true);
+          renderAll();
+        };
+        btn.className = isActive
+          ? 'px-4 py-2.5 rounded-t-xl bg-white text-indigo-700 font-bold text-sm border-t border-x border-slate-200 shadow-xs flex items-center gap-2 shrink-0 relative top-[1px]'
+          : 'px-4 py-2 rounded-t-xl bg-slate-200/60 hover:bg-slate-200 text-slate-600 font-medium text-sm flex items-center gap-2 shrink-0 transition';
+
+        btn.innerHTML = `
+          <span>${escapeHtml(cls.name)}</span>
+          ${missingCount > 0 ? `<span class="px-1.5 py-0.5 text-[11px] rounded-full ${isActive ? 'bg-rose-100 text-rose-700' : 'bg-slate-300/80 text-slate-700'} font-semibold">${missingCount}</span>` : ''}
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    // 根據功課設定的顏色回傳對應樣式（未設定時使用素灰）
+    function getSubjectBadgeStyle(colorKey) {
+      const entry = TAG_COLORS[colorKey] || TAG_COLORS.slate;
+      return entry.badge;
+    }
+
+    // 渲染主記錄表格 (最左學號列 + 橫向功課列表 + 點擊顯示 X)
+    function renderHomeworkGrid(activeClass) {
+      const table = document.getElementById('homeworkTable');
+      const students = activeClass.students || [];
+      const assignments = activeClass.assignments || [];
+      const records = activeClass.records || {};
+
+      // 建立表頭 <thead>
+      let theadHtml = `
+        <thead class="bg-slate-50 sticky top-0 z-30 border-b border-slate-200">
+          <tr>
+            <!-- 最左邊固定豎列：學號與學生 -->
+            <th class="sticky left-0 z-40 bg-slate-100 border-r border-slate-200 px-3 py-3.5 min-w-[115px] sm:min-w-[145px] sticky-left-shadow">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-700 tracking-wider">學號 / 學生</span>
+                <span class="text-[11px] text-slate-400 font-normal">${students.length}人</span>
+              </div>
+            </th>
+      `;
+
+      // 橫向列出各科功課欄位
+      assignments.forEach((hw) => {
+        const badgeStyle = getSubjectBadgeStyle(hw.color);
+        let hwMissingTotal = 0;
+        students.forEach(stu => {
+          if (records[`${stu.id}_${hw.id}`]) hwMissingTotal++;
+        });
+
+        theadHtml += `
+          <th onclick="openAssignmentModal('${hw.id}')" title="點擊編輯或刪除此功課"
+              class="group cursor-pointer hover:bg-indigo-50/70 transition border-r border-slate-200 px-3 py-2.5 min-w-[128px] max-w-[175px] align-top relative">
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold border ${badgeStyle} truncate">
+                ${escapeHtml(hw.subject)}
+              </span>
+              ${hw.date ? `<span class="text-[11px] text-slate-400 font-normal shrink-0">${escapeHtml(hw.date)}</span>` : ''}
+            </div>
+            <div class="text-sm font-bold text-slate-800 group-hover:text-indigo-700 line-clamp-2 leading-snug pr-4">
+              ${escapeHtml(hw.title)}
+            </div>
+            <div class="mt-1.5 flex items-center justify-between text-[11px]">
+              <span class="${hwMissingTotal > 0 ? 'text-rose-600 font-semibold' : 'text-slate-400'}">
+                ${hwMissingTotal > 0 ? `欠交：${hwMissingTotal}人` : '全員已交'}
+              </span>
+              <span class="opacity-0 group-hover:opacity-100 text-indigo-500 transition text-[10px]">編輯 ✎</span>
+            </div>
+          </th>
+        `;
+      });
+
+      // 若尚無功課，顯示引導新增欄位
+      if (assignments.length === 0) {
+        theadHtml += `
+          <th class="px-6 py-4 text-center text-sm font-normal text-slate-400 min-w-[240px]">
+            <button type="button" onclick="openAssignmentModal()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-dashed border-emerald-400 text-emerald-700 hover:bg-emerald-50 text-xs font-medium transition">
+              + 點擊新增第一項功課
+            </button>
+          </th>
+        `;
+      }
+
+      // 最右側凍結統計欄
+      theadHtml += `
+            <th class="sticky right-0 z-30 bg-slate-100 border-l border-slate-200 px-3 py-3.5 min-w-[78px] text-center sticky-right-shadow">
+              <span class="text-xs font-bold text-slate-700">欠交數</span>
+            </th>
+          </tr>
+        </thead>
+      `;
+
+      // 建立學生列 <tbody>
+      let tbodyHtml = `<tbody class="divide-y divide-slate-100">`;
+      let displayedStudentCount = 0;
+
+      students.forEach((stu) => {
+        let studentMissingCount = 0;
+        assignments.forEach(hw => {
+          if (records[`${stu.id}_${hw.id}`]) studentMissingCount++;
+        });
+
+        if (filterOnlyMissing && studentMissingCount === 0) {
+          return;
+        }
+        displayedStudentCount++;
+
+        const rowBgClass = studentMissingCount > 0 ? 'bg-rose-50/20 hover:bg-rose-50/40' : 'bg-white hover:bg-slate-50/80';
+        const stickyBgClass = studentMissingCount > 0 ? 'bg-rose-50/95' : 'bg-white';
+
+        tbodyHtml += `<tr class="${rowBgClass} transition-colors">`;
+
+        // 最左邊固定豎列：學號 + 姓名
+        tbodyHtml += `
+          <td class="sticky left-0 z-20 ${stickyBgClass} border-r border-slate-200 px-3 py-2.5 sticky-left-shadow">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200">
+                ${escapeHtml(stu.number)}
+              </span>
+              <span class="text-sm font-medium text-slate-800 truncate">
+                ${stu.name ? escapeHtml(stu.name) : `<span class="text-slate-400 text-xs">${escapeHtml(stu.number)}號學生</span>`}
+              </span>
+            </div>
+          </td>
+        `;
+
+        // 各項功課的 Checkbox 儲存格（點擊顯示 ✕）
+        assignments.forEach((hw) => {
+          const key = `${stu.id}_${hw.id}`;
+          const isMissing = !!records[key];
+
+          tbodyHtml += `
+            <td class="border-r border-slate-100 p-1.5 text-center align-middle">
+              <button type="button"
+                onclick="toggleRecord('${stu.id}', '${hw.id}')"
+                aria-label="學號 ${escapeHtml(stu.number)} ${escapeHtml(hw.title)} ${isMissing ? '欠交' : '已交'}"
+                class="w-10 h-10 sm:w-11 sm:h-11 mx-auto rounded-xl flex items-center justify-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-400 active:scale-90
+                ${isMissing
+                  ? 'bg-rose-600 text-white shadow-sm hover:bg-rose-700 border border-rose-700'
+                  : 'bg-white hover:bg-slate-100 text-transparent hover:text-slate-300 border-2 border-slate-200 hover:border-slate-300'}">
+                <span class="text-lg sm:text-xl font-extrabold leading-none ${isMissing ? 'animate-pop' : ''}">✕</span>
+              </button>
+            </td>
+          `;
+        });
+
+        if (assignments.length === 0) {
+          tbodyHtml += `<td class="px-6 py-3 text-center text-xs text-slate-300">—</td>`;
+        }
+
+        // 最右側該生欠交總數
+        tbodyHtml += `
+          <td class="sticky right-0 z-20 ${stickyBgClass} border-l border-slate-200 px-3 py-2.5 text-center sticky-right-shadow">
+            ${studentMissingCount > 0
+              ? `<span class="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full bg-rose-100 text-rose-700 font-bold text-xs">${studentMissingCount}</span>`
+              : `<span class="text-slate-300 text-xs font-medium">0</span>`}
+          </td>
+        `;
+
+        tbodyHtml += `</tr>`;
+      });
+
+      if (displayedStudentCount === 0) {
+        const colSpan = assignments.length + 2;
+        tbodyHtml += `
+          <tr>
+            <td colspan="${colSpan}" class="py-12 text-center text-sm text-slate-400">
+              ${filterOnlyMissing ? '太棒了！本班目前沒有任何欠交功課的學生。' : '本班尚未建立學生學號，請點擊上方「管理學號 / 名單」新增。'}
+            </td>
+          </tr>
+        `;
+      }
+
+      tbodyHtml += `</tbody>`;
+      table.innerHTML = theadHtml + tbodyHtml;
+    }
+
+    // ==================== 4. 點擊切換欠交狀態 (✕) ====================
+    window.toggleRecord = async function(studentId, assignmentId) {
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+
+      if (!activeClass.records) activeClass.records = {};
+      const key = `${studentId}_${assignmentId}`;
+
+      if (activeClass.records[key]) {
+        delete activeClass.records[key];
+      } else {
+        activeClass.records[key] = true;
+      }
+
+      renderAll();
+      await saveClassDocument(activeClass);
+    };
+
+    // ==================== 5. 班別增刪改功能 ====================
+    window.openAddClassModal = function() {
+      editingClassMode = 'add';
+      document.getElementById('classModalTitle').textContent = '新增班別';
+      document.getElementById('classNameInput').value = '';
+      document.getElementById('initialStudentCount').value = '30';
+      document.getElementById('initialStudentCountGroup').classList.remove('hidden');
+      openModal('classModal');
+      setTimeout(() => document.getElementById('classNameInput').focus(), 60);
+    };
+
+    window.openEditClassModal = function() {
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+      editingClassMode = 'edit';
+      document.getElementById('classModalTitle').textContent = '修改班別名稱';
+      document.getElementById('classNameInput').value = activeClass.name;
+      document.getElementById('initialStudentCountGroup').classList.add('hidden');
+      openModal('classModal');
+      setTimeout(() => document.getElementById('classNameInput').focus(), 60);
+    };
+
+    window.handleSaveClass = async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('classNameInput').value.trim();
+      if (!name) return;
+
+      if (editingClassMode === 'add') {
+        const count = Math.min(60, Math.max(1, parseInt(document.getElementById('initialStudentCount').value, 10) || 30));
+        const students = [];
+        for (let i = 1; i <= count; i++) {
+          students.push({
+            id: `stu_${Date.now()}_${i}`,
+            number: String(i).padStart(2, '0'),
+            name: ''
+          });
+        }
+
+        const newClass = {
+          id: 'class_' + Date.now(),
+          name,
+          order: classesData.length,
+          students,
+          assignments: [],
+          records: {}
+        };
+
+        activeClassId = newClass.id;
+        classesData.push(newClass);
+        closeModal('classModal');
+        renderAll();
+        await saveClassDocument(newClass);
+        showToast(`已建立班別「${name}」`);
+      } else {
+        const activeClass = getActiveClass();
+        if (!activeClass) return;
+        activeClass.name = name;
+        closeModal('classModal');
+        renderAll();
+        await saveClassDocument(activeClass);
+        showToast('班別名稱已更新');
+      }
+    };
+
+    window.confirmDeleteCurrentClass = function() {
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+
+      showConfirmDialog(
+        `刪除「${activeClass.name}」？`,
+        '刪除此班別後，該班的所有學生名單與欠交記錄都會永久移除且無法復原。',
+        async () => {
+          const targetId = activeClass.id;
+          classesData = classesData.filter(c => c.id !== targetId);
+          activeClassId = classesData.length > 0 ? classesData[0].id : null;
+          saveToLocalStorage();
+          renderAll();
+
+          if (isCloudEnabled && currentUser && db && firestoreApi) {
+            try {
+              await firestoreApi.deleteDoc(firestoreApi.doc(db, 'artifacts', appId, 'users', currentUser.uid, 'classes', targetId));
+            } catch (err) {
+              console.error("刪除雲端班別失敗:", err);
+            }
+          }
+          showToast(`已刪除班別「${activeClass.name}」`);
+        }
+      );
+    };
+
+    // ==================== 6. 功課增刪改與便籤顏色/記憶功能 ====================
+    function renderTagColorPicker(selectedColor) {
+      const container = document.getElementById('tagColorPickerContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      Object.entries(TAG_COLORS).forEach(([key, info]) => {
+        const isSelected = key === selectedColor;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.title = info.label;
+        btn.onclick = () => selectTagColor(key);
+        btn.className = `w-8 h-8 rounded-full flex items-center justify-center transition transform active:scale-90 mx-auto ${
+          isSelected ? 'ring-2 ring-offset-2 ring-slate-800 scale-110' : 'hover:scale-105 opacity-85 hover:opacity-100'
+        }`;
+        btn.innerHTML = `<span class="w-6 h-6 rounded-full ${info.swatch} shadow-inner border border-black/10"></span>`;
+        container.appendChild(btn);
+      });
+    }
+
+    window.selectTagColor = function(colorKey) {
+      const validColor = TAG_COLORS[colorKey] ? colorKey : 'slate';
+      document.getElementById('assignmentColorInput').value = validColor;
+      renderTagColorPicker(validColor);
+      updateTagPreview();
+    };
+
+    window.updateTagPreview = function() {
+      const previewEl = document.getElementById('tagColorPreviewBadge');
+      if (!previewEl) return;
+      const subjectText = document.getElementById('assignmentSubjectInput').value.trim() || '科目便籤';
+      const colorKey = document.getElementById('assignmentColorInput').value || 'slate';
+      const badgeStyle = getSubjectBadgeStyle(colorKey);
+      previewEl.className = `px-2.5 py-0.5 rounded-md text-[11px] font-semibold border transition-colors ${badgeStyle}`;
+      previewEl.textContent = subjectText;
+    };
+
+    // 渲染最近使用的科目便籤（含科目名稱＋顏色，可點選帶入或刪除）
+    function renderSavedSubjectChips() {
+      const container = document.getElementById('savedSubjectChipsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const tags = userPresets.subjectTags || [];
+      if (tags.length === 0) {
+        container.innerHTML = `<span class="text-[11px] text-slate-400 italic">尚無最近使用的科目便籤，新增功課後將自動記憶於此</span>`;
+        return;
+      }
+
+      tags.forEach((item, index) => {
+        const badgeStyle = getSubjectBadgeStyle(item.color);
+        const chip = document.createElement('div');
+        chip.className = `inline-flex items-center rounded-lg border text-xs font-medium overflow-hidden shadow-xs transition hover:brightness-95 ${badgeStyle}`;
+
+        const selectBtn = document.createElement('button');
+        selectBtn.type = 'button';
+        selectBtn.className = 'px-2.5 py-1 flex items-center gap-1';
+        selectBtn.textContent = item.subject;
+        selectBtn.title = `套用「${item.subject}」及其便籤顏色`;
+        selectBtn.onclick = () => {
+          document.getElementById('assignmentSubjectInput').value = item.subject;
+          selectTagColor(item.color || 'slate');
+        };
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'px-1.5 py-1 opacity-60 hover:opacity-100 hover:bg-black/10 text-[10px] leading-none';
+        removeBtn.textContent = '✕';
+        removeBtn.title = '移除此快捷便籤';
+        removeBtn.onclick = async (e) => {
+          e.stopPropagation();
+          userPresets.subjectTags.splice(index, 1);
+          renderSavedSubjectChips();
+          await saveUserPresets();
+        };
+
+        chip.appendChild(selectBtn);
+        chip.appendChild(removeBtn);
+        container.appendChild(chip);
+      });
+    }
+
+    // 渲染最近使用的功課名稱快捷選項
+    function renderRecentTitleChips() {
+      const container = document.getElementById('recentTitleChipsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const titles = userPresets.recentTitles || [];
+      if (titles.length === 0) return;
+
+      titles.forEach((titleText, index) => {
+        const chip = document.createElement('div');
+        chip.className = 'inline-flex items-center rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs overflow-hidden hover:bg-slate-200/70 transition';
+
+        const selectBtn = document.createElement('button');
+        selectBtn.type = 'button';
+        selectBtn.className = 'px-2 py-0.5 truncate max-w-[140px]';
+        selectBtn.textContent = titleText;
+        selectBtn.title = `填入「${titleText}」`;
+        selectBtn.onclick = () => {
+          document.getElementById('assignmentTitleInput').value = titleText;
+        };
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'px-1.5 py-0.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 text-[10px] leading-none';
+        removeBtn.textContent = '✕';
+        removeBtn.title = '移除此紀錄';
+        removeBtn.onclick = async (e) => {
+          e.stopPropagation();
+          userPresets.recentTitles.splice(index, 1);
+          renderRecentTitleChips();
+          await saveUserPresets();
+        };
+
+        chip.appendChild(selectBtn);
+        chip.appendChild(removeBtn);
+        container.appendChild(chip);
+      });
+    }
+
+    window.openAssignmentModal = function(assignmentId = null) {
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+
+      const deleteBtn = document.getElementById('deleteAssignmentBtn');
+      const todayStr = `${new Date().getMonth() + 1}/${new Date().getDate()}`;
+
+      renderSavedSubjectChips();
+      renderRecentTitleChips();
+
+      if (assignmentId) {
+        const hw = (activeClass.assignments || []).find(a => a.id === assignmentId);
+        if (!hw) return;
+
+        document.getElementById('assignmentModalTitle').textContent = '編輯功課欄位';
+        document.getElementById('editingAssignmentId').value = hw.id;
+        document.getElementById('assignmentSubjectInput').value = hw.subject || '';
+        document.getElementById('assignmentTitleInput').value = hw.title || '';
+        document.getElementById('assignmentDateInput').value = hw.date || '';
+        selectTagColor(hw.color || 'slate');
+        deleteBtn.classList.remove('hidden');
+      } else {
+        document.getElementById('assignmentModalTitle').textContent = '新增功課欄位';
+        document.getElementById('editingAssignmentId').value = '';
+        document.getElementById('assignmentSubjectInput').value = '';
+        document.getElementById('assignmentTitleInput').value = '';
+        document.getElementById('assignmentDateInput').value = todayStr;
+        selectTagColor('slate');
+        deleteBtn.classList.add('hidden');
+      }
+
+      openModal('assignmentModal');
+      setTimeout(() => document.getElementById('assignmentSubjectInput').focus(), 60);
+    };
+
+    window.handleSaveAssignment = async function(e) {
+      e.preventDefault();
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+
+      const editId = document.getElementById('editingAssignmentId').value;
+      const subject = document.getElementById('assignmentSubjectInput').value.trim();
+      const title = document.getElementById('assignmentTitleInput').value.trim();
+      const date = document.getElementById('assignmentDateInput').value.trim();
+      const color = document.getElementById('assignmentColorInput').value || 'slate';
+
+      if (!subject || !title) return;
+      if (!activeClass.assignments) activeClass.assignments = [];
+
+      if (editId) {
+        const hw = activeClass.assignments.find(a => a.id === editId);
+        if (hw) {
+          hw.subject = subject;
+          hw.title = title;
+          hw.date = date;
+          hw.color = color;
+        }
+        showToast('功課資料已更新');
+      } else {
+        activeClass.assignments.push({
+          id: 'hw_' + Date.now(),
+          subject,
+          title,
+          date,
+          color
+        });
+        showToast(`已新增功課「${title}」`);
+      }
+
+      // 儲存最近使用的科目便籤（名稱＋顏色）作為可選取的預設便籤
+      const existingTagIdx = userPresets.subjectTags.findIndex(t => t.subject === subject);
+      if (existingTagIdx > -1) {
+        userPresets.subjectTags.splice(existingTagIdx, 1);
+      }
+      userPresets.subjectTags.unshift({ subject, color });
+      if (userPresets.subjectTags.length > 12) {
+        userPresets.subjectTags = userPresets.subjectTags.slice(0, 12);
+      }
+
+      // 儲存最近使用的功課名稱
+      const existingTitleIdx = userPresets.recentTitles.indexOf(title);
+      if (existingTitleIdx > -1) {
+        userPresets.recentTitles.splice(existingTitleIdx, 1);
+      }
+      userPresets.recentTitles.unshift(title);
+      if (userPresets.recentTitles.length > 10) {
+        userPresets.recentTitles = userPresets.recentTitles.slice(0, 10);
+      }
+
+      closeModal('assignmentModal');
+      renderAll();
+      await Promise.all([
+        saveClassDocument(activeClass),
+        saveUserPresets()
+      ]);
+    };
+
+    window.confirmDeleteAssignment = function() {
+      const activeClass = getActiveClass();
+      const editId = document.getElementById('editingAssignmentId').value;
+      if (!activeClass || !editId) return;
+
+      const hw = (activeClass.assignments || []).find(a => a.id === editId);
+      const hwName = hw ? hw.title : '此功課';
+
+      closeModal('assignmentModal');
+      showConfirmDialog(
+        `刪除「${hwName}」？`,
+        '刪除此功課欄位後，該項功課的所有欠交勾選記錄也會一併移除。',
+        async () => {
+          activeClass.assignments = (activeClass.assignments || []).filter(a => a.id !== editId);
+          if (activeClass.records) {
+            Object.keys(activeClass.records).forEach(key => {
+              if (key.endsWith(`_${editId}`)) {
+                delete activeClass.records[key];
+              }
+            });
+          }
+          renderAll();
+          await saveClassDocument(activeClass);
+          showToast(`已刪除功課「${hwName}」`);
+        }
+      );
+    };
+
+    // ==================== 7. 管理學生學號與名單 ====================
+    window.openStudentsModal = function() {
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+
+      tempStudentsEdit = JSON.parse(JSON.stringify(activeClass.students || []));
+      document.getElementById('newStudentNum').value = '';
+      document.getElementById('newStudentName').value = '';
+      renderStudentsModalList();
+      openModal('studentsModal');
+    };
+
+    function renderStudentsModalList() {
+      const container = document.getElementById('studentsListContainer');
+      if (!container) return;
+
+      if (tempStudentsEdit.length === 0) {
+        container.innerHTML = `<div class="py-8 text-center text-sm text-slate-400">目前沒有任何學生，請在上方輸入學號新增。</div>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      tempStudentsEdit.forEach((stu, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2 bg-white p-2 rounded-xl border border-slate-200';
+        row.innerHTML = `
+          <input type="text" value="${escapeHtml(stu.number)}" onchange="updateTempStudent(${idx}, 'number', this.value)"
+                 class="w-20 px-2.5 py-1.5 rounded-lg border border-slate-200 text-sm font-bold text-center text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="學號" />
+          <input type="text" value="${escapeHtml(stu.name || '')}" onchange="updateTempStudent(${idx}, 'name', this.value)"
+                 class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="輸入學生姓名（選填）" />
+          <button type="button" onclick="removeTempStudent(${idx})" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="移除此學生">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    window.updateTempStudent = function(idx, field, value) {
+      if (tempStudentsEdit[idx]) {
+        tempStudentsEdit[idx][field] = value.trim();
+      }
+    };
+
+    window.removeTempStudent = function(idx) {
+      tempStudentsEdit.splice(idx, 1);
+      renderStudentsModalList();
+    };
+
+    window.handleAddSingleStudent = function(e) {
+      e.preventDefault();
+      const numInput = document.getElementById('newStudentNum');
+      const nameInput = document.getElementById('newStudentName');
+      const numVal = numInput.value.trim();
+      const nameVal = nameInput.value.trim();
+      if (!numVal) return;
+
+      tempStudentsEdit.push({
+        id: `stu_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        number: numVal,
+        name: nameVal
+      });
+
+      numInput.value = '';
+      nameInput.value = '';
+      renderStudentsModalList();
+      numInput.focus();
+    };
+
+    window.saveStudentsChanges = async function() {
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+
+      // 依學號自然排序（支援純數字或帶前導零）
+      tempStudentsEdit.sort((a, b) => {
+        const na = parseInt(a.number, 10);
+        const nb = parseInt(b.number, 10);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        return String(a.number).localeCompare(String(b.number), 'zh-Hant');
+      });
+
+      activeClass.students = tempStudentsEdit;
+      closeModal('studentsModal');
+      renderAll();
+      await saveClassDocument(activeClass);
+      showToast('學生學號與名單已更新');
+    };
+
+    // ==================== 8. 篩選、總覽名單與匯出匯入存檔 ====================
+    window.toggleFilterMissing = function() {
+      filterOnlyMissing = !filterOnlyMissing;
+      const btn = document.getElementById('filterMissingBtn');
+      const dot = document.getElementById('filterIndicator');
+
+      if (filterOnlyMissing) {
+        btn.className = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-300 text-sm font-semibold transition active:scale-95';
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-600';
+      } else {
+        btn.className = 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-sm font-medium transition active:scale-95';
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-300';
+      }
+      renderAll();
+    };
+
+    window.openReportModal = function() {
+      const activeClass = getActiveClass();
+      if (!activeClass) return;
+
+      const students = activeClass.students || [];
+      const assignments = activeClass.assignments || [];
+      const records = activeClass.records || {};
+      const today = new Date().toLocaleDateString('zh-HK');
+
+      let lines = [`【${activeClass.name} 欠交功課名單】(${today})`, ''];
+      let hasAnyMissing = false;
+
+      students.forEach(stu => {
+        const missingList = [];
+        assignments.forEach(hw => {
+          if (records[`${stu.id}_${hw.id}`]) {
+            missingList.push(`[${hw.subject}] ${hw.title}`);
+          }
+        });
+        if (missingList.length > 0) {
+          hasAnyMissing = true;
+          const label = stu.name ? `${stu.number}號 ${stu.name}` : `${stu.number}號`;
+          lines.push(`• ${label}：${missingList.join('、')}`);
+        }
+      });
+
+      if (!hasAnyMissing) {
+        lines.push('本班所有學生均已交齊功課！');
+      }
+
+      document.getElementById('reportTextarea').value = lines.join('\n');
+      openModal('reportModal');
+    };
+
+    window.copyReportText = async function() {
+      const textarea = document.getElementById('reportTextarea');
+      if (!textarea) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(textarea.value);
+          showToast('已複製欠交名單至剪貼簿');
+          return;
+        }
+      } catch (e) {
+        // 退回至 execCommand
+      }
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy');
+        showToast('已複製欠交名單至剪貼簿');
+      } catch (err) {
+        showToast('複製失敗，請手動全選複製', 'error');
+      }
+    };
+
+    window.exportBackupFile = function() {
+      const backupPayload = {
+        exportedAt: new Date().toISOString(),
+        version: '2.0',
+        classesData,
+        userPresets
+      };
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `學生欠交功課存檔_${dateStamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('已匯出存檔備份檔案');
+    };
+
+    window.importBackupFile = function(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (!parsed || !Array.isArray(parsed.classesData)) {
+            throw new Error('存檔格式不正確');
+          }
+
+          classesData = parsed.classesData;
+          activeClassId = classesData.length > 0 ? classesData[0].id : null;
+          if (parsed.userPresets) {
+            userPresets = {
+              subjectTags: Array.isArray(parsed.userPresets.subjectTags) ? parsed.userPresets.subjectTags : [],
+              recentTitles: Array.isArray(parsed.userPresets.recentTitles) ? parsed.userPresets.recentTitles : []
+            };
+          }
+
+          saveToLocalStorage();
+          renderAll();
+
+          if (isCloudEnabled && currentUser && db && firestoreApi) {
+            for (const cls of classesData) {
+              const docRef = firestoreApi.doc(db, 'artifacts', appId, 'users', currentUser.uid, 'classes', cls.id);
+              await firestoreApi.setDoc(docRef, sanitizeForStorage(cls), { merge: true });
+            }
+            await saveUserPresets();
+          }
+
+          showToast(`成功匯入 ${classesData.length} 個班別的存檔`);
+        } catch (err) {
+          console.error("匯入存檔失敗:", err);
+          showToast('匯入失敗：請確認選擇正確的 JSON 存檔', 'error');
+        } finally {
+          event.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    };
+
+    // ==================== 9. 通用視窗與輔助工具 ====================
+    window.openModal = function(modalId) {
+      const el = document.getElementById(modalId);
+      if (!el) return;
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+    };
+
+    window.closeModal = function(modalId) {
+      const el = document.getElementById(modalId);
+      if (!el) return;
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    };
+
+    function showConfirmDialog(title, message, onConfirm) {
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalMessage').textContent = message;
+      const actionBtn = document.getElementById('confirmModalActionBtn');
+      actionBtn.onclick = async () => {
+        closeModal('confirmModal');
+        await onConfirm();
+      };
+      openModal('confirmModal');
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const bgStyle = type === 'error'
+        ? 'bg-rose-600 text-white'
+        : 'bg-slate-900 text-white';
+
+      toast.className = `${bgStyle} px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium flex items-center gap-2 animate-pop`;
+      toast.innerHTML = `
+        <span>${type === 'error' ? '⚠️' : '✓'}</span>
+        <span>${escapeHtml(message)}</span>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, 2400);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 啟動應用程式
+    initApp();
+  </script>
+</body>
+</html>
